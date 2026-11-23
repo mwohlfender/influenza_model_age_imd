@@ -3,22 +3,11 @@
 ## PLOTTING UKHSA WEEKLY STRAIN DATA ##
 
 #### SETUP ####
-suppressMessages(require(ggplot2))
-suppressMessages(require(patchwork))
-suppressMessages(require(tidyverse))
-suppressMessages(require(data.table))
-suppressMessages(require(viridis))
-suppressMessages(require(readr))
-suppressMessages(require(readODS))
-options(dplyr.summarise.inform = FALSE) 
-
 .args <- if (interactive()) c(
-  file.path("data", "ukhsa", "annual_influenza_2025_2026.ods"),
-  file.path("data", "inputs", "subtype_years.rds")
+  file.path(Dir_Local, Subdir_Data, "ukhsa", "annual_influenza_2025_2026.ods"),
+  file.path(Dir_Local, Subdir_Data, "inputs", "subtype_years.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
-source(file.path('scripts','setup','colors.R'))
-source(file.path('scripts','setup','base_functions.R'))
 
 ## read in UKHSA data
 ## from: https://www.gov.uk/government/statistics/influenza-in-the-uk-annual-epidemiological-report-winter-2025-to-2026/influenza-in-the-uk-annual-epidemiological-report-winter-2025-to-2026#laboratory-surveillance

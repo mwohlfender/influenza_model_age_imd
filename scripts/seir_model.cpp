@@ -2,20 +2,20 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+
 // [[Rcpp::export]]
-NumericMatrix run_seir_cpp(
-    NumericVector pop,
-    NumericVector I0,
-    NumericVector vacc_cov,
-    NumericVector ve_inf,
-    double trans,
-    NumericVector susc,
-    double lat_per,
-    double inf_per,
-    NumericMatrix cij,
-    double t_end = 250.0,
-    double dt = 0.1
-) {
+NumericMatrix run_seir_cpp(NumericVector pop,
+                           NumericVector I0,
+                           NumericVector vacc_cov,
+                           NumericVector ve_inf,
+                           double trans,
+                           NumericVector susc,
+                           double lat_per,
+                           double inf_per,
+                           NumericMatrix cij,
+                           double t_end = 250.0,
+                           double dt = 0.01) {
+  
   int ng = pop.size();
   
   // Rates (two E and two I stages)
@@ -27,10 +27,10 @@ NumericMatrix run_seir_cpp(
   NumericVector Sv(ng), E1v(ng), E2v(ng), I1v(ng), I2v(ng), Rv(ng), cumIv(ng);
   for (int i = 0; i < ng; i++) {
     S[i]    = ((pop[i] - vacc_cov[i]) * susc[i]) - I0[i];
-    E1[i]   = 0.0;
-    E2[i]   = 0.0;
+    E1[i]   = 0;
+    E2[i]   = 0;
     I1[i]   = I0[i];
-    I2[i]   = 0.0;
+    I2[i]   = 0;
     R[i]    = (pop[i] - vacc_cov[i]) * (1 - susc[i]);
     Sv[i]    = (1 - ve_inf[i]) * vacc_cov[i] * susc[i];
     E1v[i]   = 0.0;
@@ -39,8 +39,8 @@ NumericMatrix run_seir_cpp(
     I2v[i]   = 0.0;
     Rv[i]    = (1 - ve_inf[i]) * vacc_cov[i] * (1 - susc[i]);
     V[i]    = ve_inf[i] * vacc_cov[i]; // those effectively vaccinated
-    cumI[i] = 0.0;
-    cumIv[i] = 0.0;
+    cumI[i] = 0;
+    cumIv[i] = 0;
   }
   
   // Output: one row per integer time point, columns = t + ng cumI values
@@ -71,13 +71,16 @@ NumericMatrix run_seir_cpp(
     
     // lambda[i] = trans * sum_j(cij[i,j] * I_tot[j])
     for (int i = 0; i < ng; i++) {
+      
       double s = 0.0;
       for (int j = 0; j < ng; j++) s += cij(i, j) * I_tot[j];
       lambda[i] = trans * s;
+      
     }
     
     // Flows
     for (int i = 0; i < ng; i++) {
+      
       newInf[i] = lambda[i] * S[i];
       progE1[i] = lat_rate * E1[i];
       progE2[i] = lat_rate * E2[i];
@@ -88,10 +91,12 @@ NumericMatrix run_seir_cpp(
       progE2v[i] = lat_rate * E2v[i];
       progI1v[i] = inf_rate * I1v[i];
       progI2v[i] = inf_rate * I2v[i];
+      
     }
     
     // Euler update (identical to odin deriv() equations)
     for (int i = 0; i < ng; i++) {
+      
       double dn = dt * (newInf[i]);
       double dnv = dt * (newInfv[i]);
       
@@ -107,8 +112,10 @@ NumericMatrix run_seir_cpp(
       I1v[i]   += dt * (progE2v[i]  - progI1v[i]);
       I2v[i]   += dt * (progI1v[i]  - progI2v[i]);
       Rv[i]    += dt * (progI2v[i]);
-      cumI[i] += dn;
-      cumIv[i] += dnv;
+      // cumI[i] += dn;
+      // cumIv[i] += dnv;
+      cumI[i] += dt * progE2[i];
+      cumIv[i] += dt * progE2v[i];
       // V is constant (deriv = 0), no update needed
       
     }
@@ -124,7 +131,11 @@ NumericMatrix run_seir_cpp(
       }
       out_row++;
     }
+    
   }
   
   return out;
+  
 }
+
+

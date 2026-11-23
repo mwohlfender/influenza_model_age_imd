@@ -1,45 +1,41 @@
 ## SEIR MODEL FOR DUMMY DATA PRODUCTION ##
 
 # suppressPackageStartupMessages(library(odin))
-Rcpp::sourceCpp('scripts/seir_model.cpp')
+Rcpp::sourceCpp('scripts/seir_model_v2.cpp')
 
 #### RUN SEIR MODEL ####
 
-run_model <- function(
-    pop,
-    I0,
-    vacc_cov,
-    ve_inf,
-    cm,
-    trans,
-    susc,
-    lat_per,
-    inf_per,
-    t_end = 300
-) {
+run_model <- function(pop,
+                      I0,
+                      vacc_cov,
+                      ve_inf,
+                      cm,
+                      trans,
+                      susc,
+                      lat_per,
+                      inf_per,
+                      t_end = 300) {
   
   # susceptibility is age-specific
-  if(length(susc) != dim(cm)[1]){ 
+  if (length(susc) != dim(cm)[1]) { 
     susc <- rep(susc, dim(cm)[1]/length(susc))
   }
   
   # absolute proportions of subpopulations susceptible
-  if(sum(susc > 1) > 0){stop('Some susceptibility more than 100%')}
+  if (sum(susc > 1) > 0) {stop('Some susceptibility more than 100%')}
   
   # call C++ solver
-  raw <- run_seir_cpp(
-    pop     = pop,
-    I0      = I0,
-    vacc_cov= vacc_cov,
-    ve_inf  = ve_inf,
-    trans   = trans,
-    susc    = susc,
-    lat_per = lat_per,
-    inf_per = inf_per,
-    cij     = cm,
-    t_end   = t_end,
-    dt      = 0.1
-  )
+  raw <- run_seir_cpp_v2(pop = pop,
+                         I0 = I0,
+                         vacc_cov = vacc_cov,
+                         ve_inf = ve_inf,
+                         trans = trans,
+                         susc = susc,
+                         lat_per = lat_per,
+                         inf_per = inf_per,
+                         cij = cm,
+                         t_end = t_end,
+                         dt = 0.01)
   
   # raw is matrix: col 1 = t, cols 2:(ng+1) = cumI per group
   ng  <- (ncol(raw) - 1)/2
@@ -49,13 +45,14 @@ run_model <- function(
   out_formatted <- tidy_output(out)
   
   ## infections = cumulative(t) - cumulative(t-1)
-  setorder(out_formatted, age_grp, imd_quintile, risk_level, vaccinated, t)
+  # setorder(out_formatted, age_grp, imd_quintile, risk_level, vaccinated, t)
   out_formatted[, infections := value - shift(value, fill = 0), 
-                   by = .(age_grp, imd_quintile, risk_level, vaccinated)]
+                by = .(age_grp, imd_quintile, risk_level, vaccinated)]
   
   out_formatted[, c('compartment','value') := NULL]
   
   return(out_formatted)
+  
 }
 
 #### FORMATTING EPI DATA FUNCTIONS ####
@@ -63,9 +60,8 @@ run_model <- function(
 make_group_lookup <- function() {
   
   base_df <- expand.grid(
-    age_grp = age_labels,
-    imd_quintile = paste0(1:nimd)
-  ) %>%
+    age_grp = Age_Groups_Names,
+    imd_quintile = paste0(1:N_IMD)) %>%
     arrange(imd_quintile, age_grp)
   
   # demographic groups
@@ -77,7 +73,8 @@ make_group_lookup <- function() {
   
   bind_rows(low, high) %>%
     arrange(group) %>% 
-    mutate(group=as.character(group))
+    mutate(group = as.character(group))
+  
 }
 
 tidy_output <- function(out_dt) {
@@ -99,7 +96,10 @@ tidy_output <- function(out_dt) {
   
   long_dt <- long_dt[lookup, on = "group"]
   
+  long_dt$imd_quintile <- as.numeric(long_dt$imd_quintile)
+  
   return(long_dt[, c('t','age_grp','imd_quintile','risk_level','vaccinated','compartment','value')])
+  
 }
 
 #### EXPAND CONTACT MATRIX ####
@@ -136,27 +136,27 @@ R0_func <- function(susceptibility,
   ng    = dim(cm_in)[1]
   ngm   = cm_in
   
-  if(!is.null(colnames(cm_in))){
-    if(substr(colnames(cm_in)[1],1,1) != substr(colnames(cm_in)[2],1,1)){
+  if (!is.null(colnames(cm_in))) {
+    if (substr(colnames(cm_in)[1],1,1) != substr(colnames(cm_in)[2],1,1)) {
       stop('Contact matrix not arranged by IMD first!')
     }
   }
   
-  if(per_capita){
-    if(is.null(population)){stop('Need population sizes')}
+  if (per_capita) {
+    if (is.null(population)) {stop('Need population sizes')}
     cm_in <- t(t(cm_in)*population_vector) 
   }
   
-  if(length(susceptibility) > 1){ # age-specific susceptibility
+  if (length(susceptibility) > 1){ # age-specific susceptibility
     susceptibility <- rep(susceptibility, ng/length(susceptibility))
-    for (k in 1:ng){ 
-      for (j in 1:ng){
+    for (k in 1:ng) { 
+      for (j in 1:ng) {
         ngm[j,k] = beta_in*susceptibility[k]*cm_in[j,k]*inf_period 
       }
     }  
-  }else{
-    for (k in 1:ng){ 
-      for (j in 1:ng){
+  } else {
+    for (k in 1:ng) { 
+      for (j in 1:ng) {
         ngm[j,k] = beta_in*susceptibility*cm_in[j,k]*inf_period 
       }
     }
@@ -166,9 +166,9 @@ R0_func <- function(susceptibility,
   EVs = eigen(ngm)$values
   R00 = max(Re(EVs[which(Im(EVs)==0)]))
   
-  if(return_beta){
+  if (return_beta) {
     return(R0assumed/(R00/beta_in))  
-  }else{
+  } else {
     return(R00)
   }
   

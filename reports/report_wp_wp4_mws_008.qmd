@@ -1,0 +1,836 @@
+---
+title: "Winter Pressures WP4"
+subtitle: "Progress Report"
+date: "19 November 2026"
+title-block-banner: true
+author: "Martin Wohlfender"
+format: html
+toc: false
+embed-resources: true
+knitr:
+  opts_knit:
+    root.dir: "C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/github/influenza_model_age_imd"
+---
+
+```{r}
+#| label: load_libraries
+#| echo: false
+#| include: false
+
+library(DT)
+
+```
+
+```{r}
+#| label: setup
+#| echo: false
+#| include: false
+
+setwd("C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/github/influenza_model_age_imd")
+
+source(file = "setup.R")
+
+unknown_pars <- readRDS(file.path(Dir_Local, Subdir_Data, "dummy_data", "unknown_parameters.rds"))
+
+```
+
+# Admin
+
+
+# List of abbreviations
+
+-   IMD: Index of Multiple Deprivation
+-   LAD: Local Authority District
+-   LSOA: Lower layer Super Output Area
+
+
+# Dummy primary care data (2023)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2023_age_imd_prim.png){fig-align="center" height=650px}
+:::
+
+# Dummy secondary care data (2023)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2023_age_imd_sec.png){fig-align="center" height=650px}
+:::
+
+# Estimated parameters
+
+For each subtype circulating in a season:
+
+- Transmission rate $\beta$ (1 value
+- Susceptibility by broader age groups (3 values: 0-17, 18-64, 65+)
+- Logarithm of total number of initially infected individuals (1 value)
+- Reporting rate for primary care by broader age group and risk group
+(6 values: 0-17 \& low risk, 18-64 \& low risk, 65+ \& low risk, 0-17 \& high risk, 18-64 \& high risk, 65+ \& high risk)
+- Relative reporting rate for primary care by IMD quintile (2 values)
+
+- Reporting rate for secondary care by broader age group and risk group
+(6 values: 0-17 \& low risk, 18-64 \& low risk, 65+ \& low risk, 0-17 \& high risk, 18-64 \& high risk, 65+ \& high risk)
+- Relative reporting rate for secondary care by IMD quintile (2 values)
+
+
+# Estimating parameters from simulated data
+
+## Scenario 1: Estimating transmission rate $\beta$
+
+### 2023/2024
+
+```{r}
+#| label: results_1_1_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795104228905.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795104228905.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- mean(test_samples %>% pull(2))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+
+test_true_values <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(transmissibility)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02), 5),
+                        true_value = round(test_true_values, 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_1_1_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_1_1_c
+#| echo: false
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_1_1_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_1_1_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+### 2024/2025
+
+```{r}
+#| label: results_1_2_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795107611821.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795107611821.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- mean(test_samples %>% pull(2))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+
+test_true_values <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(transmissibility)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02), 5),
+                        true_value = round(test_true_values, 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_1_2_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_1_2_c
+#| echo: false
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_1_2_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_1_2_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+### 2025/2026
+
+```{r}
+#| label: results_1_3_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795068701458.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795068701458.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+
+test_true_values <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(transmissibility)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01), 5),
+                        true_value = round(test_true_values, 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_1_3_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_1_3_c
+#| echo: false
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_1_3_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_1_3_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+
+## Scenario 2: Estimating transmission rate $\beta$ and number of initially infected individuals
+
+### 2023/2024
+
+```{r}
+#| label: results_2_1_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795101051723.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795101051723.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- 10^mean(test_samples %>% pull(2))
+test_mean_03 <- mean(test_samples %>% pull(3))
+test_mean_04 <- 10^mean(test_samples %>% pull(4))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,2] <- 10^test_credible_intervals[,2]
+test_credible_intervals[,4] <- 10^test_credible_intervals[,4]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(transmissibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02, test_mean_03, test_mean_04), 5),
+                        true_value = round(c(test_true_values_trans[1], test_true_values_init_infected[1],
+                                             test_true_values_trans[2], test_true_values_init_infected[2]), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_2_1_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_2_1_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_2_1_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_2_1_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+### 2024/2025
+
+```{r}
+#| label: results_2_2_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795106119383.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795106119383.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- 10^mean(test_samples %>% pull(2))
+test_mean_03 <- mean(test_samples %>% pull(3))
+test_mean_04 <- 10^mean(test_samples %>% pull(4))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,2] <- 10^test_credible_intervals[,2]
+test_credible_intervals[,4] <- 10^test_credible_intervals[,4]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(transmissibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02, test_mean_03, test_mean_04), 5),
+                        true_value = round(c(test_true_values_trans[1], test_true_values_init_infected[1],
+                                       test_true_values_trans[2], test_true_values_init_infected[2]), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_2_2_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_2_2_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_2_2_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_2_2_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+### 2025/2026
+
+```{r}
+#| label: results_2_3_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795069304762.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795069304762.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- 10^mean(test_samples %>% pull(2))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,2] <- 10^test_credible_intervals[,2]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(transmissibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02), 5),
+                        true_value = round(c(test_true_values_trans[1], test_true_values_init_infected[1]), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_2_3_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_2_3_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_2_3_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_2_3_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+
+## Scenario 3: Estimating transmission rate $\beta$, susceptibility by broader age group, and number of initially infected individuals
+
+### 2023/2024
+
+```{r}
+#| label: results_3_1_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795101337919.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795101337919.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- mean(test_samples %>% pull(2))
+test_mean_03 <- mean(test_samples %>% pull(3))
+test_mean_04 <- mean(test_samples %>% pull(4))
+test_mean_05 <- 10^mean(test_samples %>% pull(5))
+test_mean_06 <- mean(test_samples %>% pull(6))
+test_mean_07 <- mean(test_samples %>% pull(7))
+test_mean_08 <- mean(test_samples %>% pull(8))
+test_mean_09 <- mean(test_samples %>% pull(9))
+test_mean_10 <- 10^mean(test_samples %>% pull(10))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,5] <- 10^test_credible_intervals[,5]
+test_credible_intervals[,10] <- 10^test_credible_intervals[,10]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(transmissibility)
+
+test_true_values_children_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(children_susceptibility)
+
+test_true_values_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(adults_susceptibility)
+
+test_true_values_older_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(older_adults_susceptibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2023) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02, test_mean_03, test_mean_04, test_mean_05,
+                                           test_mean_06, test_mean_07, test_mean_08, test_mean_09, test_mean_10), 5),
+                        true_value = round(c(test_true_values_trans[1], test_true_values_children_susc[1],
+                                             test_true_values_adults_susc[1], test_true_values_older_adults_susc[1],
+                                             test_true_values_init_infected[1],
+                                             test_true_values_trans[2], test_true_values_children_susc[2],
+                                             test_true_values_adults_susc[2], test_true_values_older_adults_susc[2],
+                                             test_true_values_init_infected[2]), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_3_1_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_3_1_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_3_1_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_3_1_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+
+### 2024/2025
+
+```{r}
+#| label: results_3_2_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795094578338.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795094578338.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- mean(test_samples %>% pull(2))
+test_mean_03 <- mean(test_samples %>% pull(3))
+test_mean_04 <- mean(test_samples %>% pull(4))
+test_mean_05 <- 10^mean(test_samples %>% pull(5))
+test_mean_06 <- mean(test_samples %>% pull(6))
+test_mean_07 <- mean(test_samples %>% pull(7))
+test_mean_08 <- mean(test_samples %>% pull(8))
+test_mean_09 <- mean(test_samples %>% pull(9))
+test_mean_10 <- 10^mean(test_samples %>% pull(10))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,5] <- 10^test_credible_intervals[,5]
+test_credible_intervals[,10] <- 10^test_credible_intervals[,10]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(transmissibility)
+
+test_true_values_children_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(children_susceptibility)
+
+test_true_values_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(adults_susceptibility)
+
+test_true_values_older_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(older_adults_susceptibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2024) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02, test_mean_03, test_mean_04, test_mean_05,
+                                           test_mean_06, test_mean_07, test_mean_08, test_mean_09, test_mean_10), 5),
+                        true_value = round(c(test_true_values_trans[1], test_true_values_children_susc[1],
+                                             test_true_values_adults_susc[1], test_true_values_older_adults_susc[1],
+                                             test_true_values_init_infected[1],
+                                             test_true_values_trans[2], test_true_values_children_susc[2],
+                                             test_true_values_adults_susc[2], test_true_values_older_adults_susc[2],
+                                             test_true_values_init_infected[2]), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_3_2_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_3_2_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_3_2_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_3_2_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+### 2025/2026
+
+```{r}
+#| label: results_3_3_a
+#| echo: false
+#| include: false
+
+test_output <- readRDS(file = paste0(Dir_Local, "/output/data/", "output_1795068604889.rds"))[[1]]
+test_parameters <- readRDS(file = paste0(Dir_Local, "/output/data/", "parameters_1795068604889.rds"))
+
+test_samples <- as_tibble(getSample(test_output, start = 2))
+test_mean_01 <- mean(test_samples %>% pull(1))
+test_mean_02 <- mean(test_samples %>% pull(2))
+test_mean_03 <- mean(test_samples %>% pull(3))
+test_mean_04 <- mean(test_samples %>% pull(4))
+test_mean_05 <- 10^mean(test_samples %>% pull(5))
+test_credible_intervals <- getCredibleIntervals(test_samples, quantiles = c(0.025, 0.975))
+test_credible_intervals[,5] <- 10^test_credible_intervals[,5]
+
+test_true_values_trans <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(transmissibility)
+
+test_true_values_children_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(children_susceptibility)
+
+test_true_values_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(adults_susceptibility)
+
+test_true_values_older_adults_susc <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(older_adults_susceptibility)
+
+test_true_values_init_infected <- unknown_pars$epid_parameters %>%
+  filter(year == 2025) %>%
+  pull(init_infected)
+
+test_coverage <- tibble(low = round(test_credible_intervals[1,], 5),
+                        high = round(test_credible_intervals[2,], 5),
+                        estimate = round(c(test_mean_01, test_mean_02, test_mean_03, test_mean_04, test_mean_05), 5),
+                        true_value = round(c(test_true_values_trans, test_true_values_children_susc,
+                                             test_true_values_adults_susc, test_true_values_older_adults_susc,
+                                             test_true_values_init_infected), 5)) %>%
+  mutate(coverage = low <= true_value & true_value <= high)
+
+```
+
+#### Summary
+
+```{r}
+#| label: results_3_3_b
+#| echo: false
+
+summary(test_output)
+
+```
+
+#### Trace Plot
+
+```{r}
+#| label: results_3_3_c
+#| echo: false
+#| fig-height: 10
+
+tracePlot(test_output, start = 2)
+
+```
+
+#### Gelman Diagnostics
+
+```{r}
+#| label: results_3_3_d
+#| echo: false
+
+gelmanDiagnostics(test_output)
+
+```
+
+#### 95\% credible interval
+
+```{r}
+#| label: results_3_3_e
+#| echo: false
+
+datatable(test_coverage)
+
+```
+
+
+# Dummy primary care data (2024)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2024_age_imd_prim.png){fig-align="center" height=650px}
+:::
+
+# Dummy secondary care data (2024)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2024_age_imd_sec.png){fig-align="center" height=650px}
+:::
+
+# Dummy primary care data (2025)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2025_age_imd_prim.png){fig-align="center" height=650px}
+:::
+
+# Dummy secondary care data (2025)
+
+:::{.r-stack}
+![](C:/Users/MartinWohlfender/Documents/documents_msw/projects/winter_pressures/local/influenza_model_age_imd/output/figures/plot_dummy_surveillance_2025_age_imd_sec.png){fig-align="center" height=650px}
+:::
+
+

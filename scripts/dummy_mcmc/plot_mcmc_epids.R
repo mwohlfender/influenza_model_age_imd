@@ -216,7 +216,7 @@ mcmc_samples_filtered_burned[, iteration := 1:n_samples, .(chain, epidemic)] # r
 
 admin_cols <- c('likelihood','gp_likelihood','hospital_likelihood','subtype_likelihood',
                 'chain','iteration','epidemic')
-posterior_cols <- colnames(mcmc_samples_filtered_burned)[colnames(mcmc_samples_filtered_burned) %notin% admin_cols]
+posterior_cols <- colnames(mcmc_samples_filtered_burned)[!(colnames(mcmc_samples_filtered_burned) %in% admin_cols)]
 
 ## only do for every tenth/hundredth/thousandth epidemic to save time
 mod_val <- if(nrow(mcmc_samples_filtered_burned) > 50000){1000}else{

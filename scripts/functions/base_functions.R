@@ -1,5 +1,12 @@
 #### BASE FUNCTIONS FOR ANALYSIS ####
 
+
+# get beta parameters from mean and concentration
+beta_pars <- function(mean, concentration) {
+  c(a = mean * concentration, b = (1 - mean) * concentration)
+}
+
+
 na_to_0 <- function(x){
   x[is.na(x)] <- 0
   x
@@ -14,23 +21,27 @@ susc_vector <- function(x,
   
   x <- unname(unlist(x))
   
-  if(length(x) %notin% 2:3){stop('Length not 2 or 3')}
+  if(!(length(x) %in% 2:3)){stop('Length not 2 or 3')}
   if(length(x) == 2){x <- c(x[1], 1, x[2])}
   
   c(rep(x[1],rep1), rep(x[2],rep2), rep(x[3],rep3))
   
 }
 
-imd_spline <- function(imd_pars){
+imd_spline <- function(imd_pars) {
   
-  if(length(imd_pars) != 2){stop('Input length not 2')}
+  if (length(imd_pars) != 2) {
+    
+    stop('Input length not 2')
+    
+    }
   
   # IMD 1 is exp(imd_pars[1]) times the reporting rate of IMD 3,
   # IMD 5 is exp(imd_pars[1]) times the reporting rate of IMD 3
   
   x <- exp(imd_pars)
   
-  c(x[1], 1 + (x[1] - 1)/2, 1, 1 + (x[2] - 1)/2, x[2])
+  return(c(x[1], 1 + (x[1] - 1)/2, 1, 1 + (x[2] - 1)/2, x[2]))
   
 }
 
@@ -58,7 +69,7 @@ theme_lg <- function(gridline_x = FALSE, gridline_y = TRUE) {
   theme_bw(
   ) +
     theme(
-      text = element_text(family = "Helvetica"),
+      # text = element_text(family = "Helvetica"),
       plot.title = element_text(
         size = 18,
         face = "bold",

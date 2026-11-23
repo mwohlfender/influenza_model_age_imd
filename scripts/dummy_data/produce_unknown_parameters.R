@@ -1,61 +1,19 @@
 ## UNKNOWN PARAMETERS ##
 
 #### SETUP ####
-suppressPackageStartupMessages(require(ggplot2))
-suppressPackageStartupMessages(require(tidyverse))
-suppressPackageStartupMessages(require(data.table))
-suppressPackageStartupMessages(require(readr))
-suppressPackageStartupMessages(require(patchwork))
-options(dplyr.summarise.inform = FALSE) 
-
 .args <- if (interactive()) c(
-  file.path("data", "inputs", "imd_age_pop.rds"),
-  file.path("data", "inputs", "subtype_years.rds"),
-  file.path("data", "dummy_data", "unknown_parameters.rds")
+  file.path(Dir_Local, Subdir_Data, "inputs", "imd_age_pop_lad.rds"),
+  file.path(Dir_Local, Subdir_Data, "inputs", "subtype_years.rds"),
+  file.path(Dir_Local, Subdir_Data, "dummy_data", "unknown_parameters.rds")
 ) else commandArgs(trailingOnly = TRUE)
 
 set.seed(60) 
 
-source(file.path("scripts","setup","colors.R"))
-source(file.path('scripts','setup','base_functions.R'))
 
-## read in population data
-imd_age_pop_reg <- readRDS(.args[1])
-age_labels <- unique(imd_age_pop_reg$age_grp)
-nage <- n_distinct(imd_age_pop_reg$age_grp)
-nimd <- n_distinct(imd_age_pop_reg$imd_quintile)
-
-## aggregate
-imd_age_pop <- imd_age_pop_reg %>% 
-  group_by(age_grp, imd_quintile) %>% 
-  summarise(pop = sum(pop))
-
-imd_age_pop$age_grp <- factor(imd_age_pop$age_grp, levels = age_labels)
-
-imd_age_pop <- imd_age_pop %>% 
-  arrange(imd_quintile, age_grp)
-
-broad_ages_susc <- data.table(
-  age_grp = age_labels, 
-  broad_age = fcn_assign_ages(
-    'children', 
-    'adults',
-    'older_adults',
-    age_labels
-    )
-)
-broad_ages_care_rates <- data.table(
-  age_grp = age_labels, 
-  broad_age = fcn_assign_ages(
-    'children', 
-    'adults',
-    'older_adults',
-    age_labels
-  )
-)
+broad_ages_care_rates <- data.table(age_grp = Age_Groups_Names, 
+                                    broad_age = fcn_assign_ages('children', 'adults', 'older_adults', Age_Groups_Names))
 
 ## number of years of data
-years <- 2023:2025 # 2023-24 to 2025-26
 subtype_years <- read_rds(.args[2])
 subtype_years <- subtype_years %>% ungroup() %>% 
   select(season, subtype) %>% unique() %>% 
@@ -92,7 +50,8 @@ epid_pars <- subtype_years %>%
 
 #### MAKE INTO DATA TABLE ####
 
-epid_parameters <- subtype_years %>% select(year, subtype) %>% 
+epid_parameters <- subtype_years %>%
+  select(year, subtype) %>% 
   left_join(epid_pars, by = c('year','subtype')) %>% 
   mutate(start_date = as.Date(paste0('01-09-', year), "%d-%m-%Y"),
          init_infected = floor(rnorm(n = nrow(subtype_years), mean = 200, sd = 10))) %>% 
@@ -124,19 +83,17 @@ care_rate_df <- data.frame(
 
 # make one for each subtype-season
 care_rate_subtype_seasons <- data.frame()
-for(i in 1:nrow(subtype_years)){
-  care_rate_subtype_seasons <- rbind(
-    care_rate_subtype_seasons,
-    care_rate_df %>% mutate(season = subtype_years$season[i],
-                            subtype = subtype_years$subtype[i],
-                            year = subtype_years$year[i],
-                            gp_rate = get(paste0('gp_rate_', 
-                                                 subtype_years$year[i], '_',
-                                                 subtype_years$subtype[i])),
-                            hosp_rate = get(paste0('hosp_rate_', 
-                                                 subtype_years$year[i], '_',
-                                                 subtype_years$subtype[i])))
-  )
+for (i in 1:nrow(subtype_years)) {
+  care_rate_subtype_seasons <- rbind(care_rate_subtype_seasons,
+                                     care_rate_df %>% mutate(season = subtype_years$season[i],
+                                                             subtype = subtype_years$subtype[i],
+                                                             year = subtype_years$year[i],
+                                                             gp_rate = get(paste0('gp_rate_', 
+                                                                                  subtype_years$year[i], '_',
+                                                                                  subtype_years$subtype[i])),
+                                                             hosp_rate = get(paste0('hosp_rate_', 
+                                                                                    subtype_years$year[i], '_',
+                                                                                    subtype_years$subtype[i]))))
 }
 
 care_rate_age_df <- data.table(cross_join(
@@ -146,18 +103,12 @@ care_rate_age_df[, c('broad_age.x','broad_age.y') := NULL]
 
 ## IMD gradients: season-specific but not subtype-specific
 
-imd_spline_pars_2023 <- data.table(
-  primary = c(-0.1, 0.12),
-  secondary = c(-0.07, 0.05)
-)
-imd_spline_pars_2024 <- data.table(
-  primary = c(0, 0.08),
-  secondary = c(-0.12, 0)
-)
-imd_spline_pars_2025 <- data.table(
-  primary = c(0.11, 0.09),
-  secondary = c(0.08, -0.04)
-)
+imd_spline_pars_2023 <- data.table(primary = c(-0.1, 0.12),
+                                   secondary = c(-0.07, 0.05))
+imd_spline_pars_2024 <- data.table(primary = c(0, 0.08),
+                                   secondary = c(-0.12, 0))
+imd_spline_pars_2025 <- data.table(primary = c(0.11, 0.09),
+                                   secondary = c(0.08, -0.04))
 
 imd_spline_pars_2023_AH1N1 <- imd_spline_pars_2023
 imd_spline_pars_2023_AH3N2 <- imd_spline_pars_2023
@@ -169,7 +120,7 @@ imd_spline_pars_2025_AH3N2 <- imd_spline_pars_2025
 imd_spline_pars <- data.table()
 rel_imd_rep_rates <- data.table()
 
-for(i in 1:nrow(subtype_years)){
+for (i in 1:nrow(subtype_years)) {
   
   imd_spline_dat <- get(paste0('imd_spline_pars_',
                                subtype_years$year[i], '_',
@@ -181,15 +132,14 @@ for(i in 1:nrow(subtype_years)){
                                     subtype = subtype_years$subtype[i],
                                     year = subtype_years$year[i]))
   
-  rel_imd_rep_rates <- rbind(
-    rel_imd_rep_rates,
-    data.frame(imd_quintile = 1:5,
-               season = subtype_years$season[i],
-               subtype = subtype_years$subtype[i],
-               year = subtype_years$year[i],
-               rel_primary_rates = imd_spline(imd_spline_dat$primary),
-               rel_secondary_rates = imd_spline(imd_spline_dat$secondary))
-  )
+  rel_imd_rep_rates <- rbind(rel_imd_rep_rates,
+                             data.frame(imd_quintile = 1:5,
+                                        season = subtype_years$season[i],
+                                        subtype = subtype_years$subtype[i],
+                                        year = subtype_years$year[i],
+                                        rel_primary_rates = imd_spline(imd_spline_dat$primary),
+                                        rel_secondary_rates = imd_spline(imd_spline_dat$secondary)))
+  
 }
 
 # merge rates together
@@ -200,9 +150,9 @@ care_rate_imd_df <- care_rate_age_df %>%
   mutate(gp_rate = gp_rate*rel_primary_rates,
          hosp_rate = hosp_rate*rel_secondary_rates)
 
-care_rate_imd_df$age_grp <- factor(care_rate_imd_df$age_grp, levels = age_labels) 
+care_rate_imd_df$age_grp <- factor(care_rate_imd_df$age_grp, levels = Age_Groups_Names) 
 
-plot_igprs_ihrs <- function(k){
+plot_igprs_ihrs <- function(k) {
   
   ratep1 <- care_rate_imd_df %>% 
     filter(season == subtype_years$season[k],
@@ -249,7 +199,7 @@ plot_igprs_ihrs <- function(k){
 }
 
 ratio_plots <- map(.x = 1:nrow(subtype_years),
-    .f = plot_igprs_ihrs)
+                   .f = plot_igprs_ihrs)
 
 patchwork::wrap_plots(ratio_plots) + plot_layout(ncol = 1, guides = 'collect')
 ggsave(file.path('output','figures','dummy_infections','reporting_rates.png'), width = 16, height = 25)
@@ -270,7 +220,7 @@ plot_epi_par <- function(par_name){
   epid_parameters %>% 
     ggplot() + 
     geom_bar(aes(x = year, y = !!sym(par_name), fill = subtype),
-               width = 0.8, position = 'dodge', stat = 'identity') +
+             width = 0.8, position = 'dodge', stat = 'identity') +
     scale_fill_manual(values = subtype_colors, labels = subtype_names) + 
     scale_x_continuous(breaks = c(1, 2, 3), labels = c('2023/24', '2024/25', '2025/26')) +
     theme_bw()
@@ -278,7 +228,7 @@ plot_epi_par <- function(par_name){
 }
 
 epi_plots <- map(.x = colnames(epid_parameters)[!colnames(epid_parameters) %in% c('year', 'subtype', 'start_date')],
-    .f = plot_epi_par)
+                 .f = plot_epi_par)
 
 patchwork::wrap_plots(epi_plots, guides = 'collect')
 ggsave(file.path("output","figures","dummy_infections","epid_parameters.png"),
@@ -287,4 +237,5 @@ ggsave(file.path("output","figures","dummy_infections","epid_parameters.png"),
 #### SAVE UNKNOWN PARAMETERS ####
 
 saveRDS(unknown_pars, .args[3])
+
 
